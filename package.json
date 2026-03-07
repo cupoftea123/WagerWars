@@ -1,0 +1,21 @@
+{
+  "name": "wager-wars",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "pnpm -r build",
+    "dev:server": "pnpm --filter @wager-wars/server dev",
+    "dev:web": "pnpm --filter @wager-wars/web dev",
+    "test": "pnpm -r test",
+    "test:shared": "pnpm --filter @wager-wars/shared test",
+    "test:contracts": "pnpm --filter @wager-wars/contracts test",
+    "clean": "pnpm -r clean"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=9.0.0"
+  }
+}

@@ -1,0 +1,82 @@
+"use client";
+
+import { Action, type RoundResult as RoundResultType, RoundModifier } from "@wager-wars/shared";
+import { ActionIcon, ACTION_COLORS } from "./ActionIcons";
+
+interface RoundResultProps {
+  results: RoundResultType[];
+}
+
+const MODIFIER_ICONS: Record<string, { icon: string; color: string }> = {
+  NONE: { icon: "", color: "" },
+  POWER_SURGE: { icon: "zap", color: "text-red-400" },
+  OVERCHARGE: { icon: "battery", color: "text-yellow-400" },
+  REFLECT: { icon: "mirror", color: "text-cyan-400" },
+  TAX: { icon: "coins", color: "text-orange-400" },
+};
+
+function ActionBadge({ action }: { action: Action }) {
+  const colors = ACTION_COLORS[action];
+  return (
+    <div className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-lg bg-gradient-to-r ${colors.bg} ${colors.border} border`}>
+      <ActionIcon action={action} size={16} />
+      <span className={`text-xs font-bold ${colors.text}`}>
+        {action.charAt(0) + action.slice(1).toLowerCase()}
+      </span>
+    </div>
+  );
+}
+
+export function RoundHistory({ results }: RoundResultProps) {
+  if (results.length === 0) return null;
+
+  return (
+    <div className="glass-card rounded-2xl p-4">
+      <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Battle Log</h3>
+      <div className="space-y-2 max-h-56 overflow-y-auto pr-1 custom-scrollbar">
+        {results.map((r) => (
+          <div
+            key={r.round}
+            className="flex items-center gap-3 p-2 rounded-xl bg-white/[0.02] border border-white/[0.04]"
+          >
+            {/* Round number */}
+            <div className="w-8 h-8 rounded-lg bg-white/[0.05] flex items-center justify-center flex-shrink-0">
+              <span className="text-xs font-bold text-gray-400">{r.round}</span>
+            </div>
+
+            {/* Your action */}
+            <ActionBadge action={r.player1Action} />
+
+            {/* VS indicator with damage */}
+            <div className="flex flex-col items-center flex-shrink-0 mx-1">
+              <span className="text-[10px] text-gray-600 font-bold">VS</span>
+            </div>
+
+            {/* Opponent action */}
+            <ActionBadge action={r.player2Action} />
+
+            {/* Damage summary */}
+            <div className="ml-auto flex items-center gap-2 text-xs flex-shrink-0">
+              {r.player2Damage > 0 && (
+                <span className="text-green-400 font-mono">-{r.player2Damage}</span>
+              )}
+              {r.player1Damage > 0 && (
+                <span className="text-red-400 font-mono">-{r.player1Damage}</span>
+              )}
+            </div>
+
+            {/* Modifier badge */}
+            {r.modifier !== RoundModifier.None && (
+              <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                r.modifier === RoundModifier.PowerSurge ? "bg-red-400" :
+                r.modifier === RoundModifier.Overcharge ? "bg-yellow-400" :
+                r.modifier === RoundModifier.Reflect ? "bg-cyan-400" :
+                "bg-orange-400"
+              }`} title={r.modifier} />
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
