@@ -210,17 +210,18 @@ export class Match {
 
   // --- Timers ---
 
-  /** Start commit-phase timer. Round 1 = 30s, rounds 2-7 = 15s. */
+  /** Start commit-phase timer. Round 1 = 30s, rounds 2-7 = 20s. Includes 3s grace period for network latency. */
   startCommitTimer(onTimeout: () => void): void {
     this.clearCommitTimer();
-    const duration = this.state.currentRound === 1 ? 30_000 : 15_000;
-    this.commitTimer = setTimeout(onTimeout, duration);
+    const GRACE_PERIOD = 3_000;
+    const duration = this.state.currentRound === 1 ? 30_000 : 20_000;
+    this.commitTimer = setTimeout(onTimeout, duration + GRACE_PERIOD);
   }
 
-  /** Start reveal-phase timer. Always 15s. */
+  /** Start reveal-phase timer. Always 20s (includes grace period). */
   startRevealTimer(onTimeout: () => void): void {
     this.clearRevealTimer();
-    this.revealTimer = setTimeout(onTimeout, 15_000);
+    this.revealTimer = setTimeout(onTimeout, 20_000);
   }
 
   clearCommitTimer(): void {
@@ -238,8 +239,8 @@ export class Match {
     this.clearRevealTimer();
   }
 
-  /** Get the commit timeout duration in seconds for the current round */
+  /** Get the commit timeout duration in seconds for the current round (shown to client) */
   getCommitTimeout(): number {
-    return this.state.currentRound === 1 ? 30 : 15;
+    return this.state.currentRound === 1 ? 30 : 20;
   }
 }

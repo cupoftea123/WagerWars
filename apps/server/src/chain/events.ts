@@ -17,7 +17,7 @@ const MATCH_JOINED_EVENT = parseAbiItem(
 );
 
 /** Polling interval for checking new events (ms) */
-const POLL_INTERVAL = 5_000;
+const POLL_INTERVAL = 12_000;
 
 /**
  * Watch for contract events to confirm on-chain deposits.
