@@ -17,6 +17,8 @@ const io = new Server<ClientToServerEvents, ServerToClientEvents, Record<string,
       origin: config.corsOrigin,
       methods: ["GET", "POST"],
     },
+    transports: ["websocket"],
+    allowUpgrades: false,
   },
 );
 
