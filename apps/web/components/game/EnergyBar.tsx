@@ -4,50 +4,40 @@ import { useRef, useEffect, useState } from "react";
 
 interface EnergyBarProps {
   energy: number;
-  label: string;
+  label?: string;
 }
 
-export function EnergyBar({ energy, label }: EnergyBarProps) {
+export function EnergyBar({ energy }: EnergyBarProps) {
   const prevEnergyRef = useRef(energy);
-  const [animatingOrbs, setAnimatingOrbs] = useState<number[]>([]);
+  const [flash, setFlash] = useState<"gain" | "lose" | null>(null);
 
   useEffect(() => {
     const prev = prevEnergyRef.current;
-    if (energy > prev) {
-      const newOrbs = Array.from({ length: energy - prev }, (_, i) => prev + i);
-      setAnimatingOrbs(newOrbs);
-      const timer = setTimeout(() => setAnimatingOrbs([]), 400);
+    if (energy !== prev) {
+      setFlash(energy > prev ? "gain" : "lose");
+      const timer = setTimeout(() => setFlash(null), 600);
       prevEnergyRef.current = energy;
       return () => clearTimeout(timer);
     }
-    prevEnergyRef.current = energy;
   }, [energy]);
 
-  const displayCount = Math.min(energy, 24);
-
   return (
-    <div className="flex items-center gap-2">
-      <span className="text-xs text-gray-500 uppercase tracking-wider w-10 text-right">{label}</span>
-      <div className="flex gap-1 flex-wrap items-center">
-        {Array.from({ length: displayCount }).map((_, i) => {
-          const isNew = animatingOrbs.includes(i);
-          return (
-            <div
-              key={i}
-              className={`w-2.5 h-2.5 rounded-full ${isNew ? "animate-energy-appear" : ""}`}
-              style={{
-                background: "linear-gradient(135deg, #60a5fa, #3b82f6)",
-                boxShadow: "0 0 6px rgba(59, 130, 246, 0.5), 0 0 2px rgba(59, 130, 246, 0.8), inset 0 1px 0 rgba(255,255,255,0.3)",
-                animationDelay: isNew ? `${(i - Math.min(...animatingOrbs)) * 50}ms` : undefined,
-              }}
-            />
-          );
-        })}
-        {energy > 24 && (
-          <span className="text-xs text-blue-400 ml-1">+{energy - 24}</span>
-        )}
-      </div>
-      <span className="text-sm font-mono font-bold text-blue-400 ml-auto">{energy}</span>
+    <div className="flex items-center gap-1.5">
+      {/* Lightning icon */}
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" className="flex-shrink-0">
+        <path d="M9 1L3 9h5l-1 6 7-8H9l1-6z" fill="#eab308" opacity="0.9" />
+      </svg>
+      <span
+        className={`text-sm font-mono font-bold transition-colors duration-300 ${
+          flash === "gain"
+            ? "text-green-400"
+            : flash === "lose"
+              ? "text-red-400"
+              : "text-yellow-400"
+        }`}
+      >
+        {energy}
+      </span>
     </div>
   );
 }

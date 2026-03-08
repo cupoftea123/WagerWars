@@ -37,12 +37,15 @@ export function HealthBar({ hp, label, reversed = false }: HealthBarProps) {
   const glowColor = isLow ? "rgba(239,68,68,0.5)" : isMid ? "rgba(234,179,8,0.3)" : "rgba(34,197,94,0.3)";
 
   return (
-    <div className={`flex items-center gap-3 ${reversed ? "flex-row-reverse" : ""}`}>
-      <span className={`text-xs font-bold uppercase tracking-wider w-10 ${reversed ? "text-left" : "text-right"} ${
-        isLow ? "text-red-400" : "text-gray-400"
-      }`}>
-        {label}
-      </span>
+    <div className={`flex items-center gap-2 ${reversed ? "flex-row-reverse" : ""}`}>
+      {/* Heart icon */}
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" className="flex-shrink-0">
+        <path
+          d="M8 14s-5.5-3.5-5.5-7.5a3 3 0 015.5-2 3 3 0 015.5 2c0 4-5.5 7.5-5.5 7.5z"
+          fill={isLow ? "#ef4444" : isMid ? "#eab308" : "#ef4444"}
+          opacity={isLow ? "1" : "0.7"}
+        />
+      </svg>
 
       <div className="flex-1 relative">
         {/* Background track */}

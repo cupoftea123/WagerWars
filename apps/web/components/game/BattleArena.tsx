@@ -416,9 +416,11 @@ export function BattleArena({ matchId }: BattleArenaProps) {
                 )}
               </div>
             </div>
-            <HealthBar hp={match.opponentHp} label="HP" reversed />
-            <div className="mt-1.5 md:mt-2">
-              <EnergyBar energy={match.opponentEnergy} label="Energy" />
+            <div className="flex items-center gap-2">
+              <div className="flex-1">
+                <HealthBar hp={match.opponentHp} label="HP" reversed />
+              </div>
+              <EnergyBar energy={match.opponentEnergy} />
             </div>
           </div>
         </div>
@@ -520,9 +522,11 @@ export function BattleArena({ matchId }: BattleArenaProps) {
                 )}
               </div>
             </div>
-            <HealthBar hp={match.yourHp} label="HP" />
-            <div className="mt-1.5 md:mt-2">
-              <EnergyBar energy={match.yourEnergy} label="Energy" />
+            <div className="flex items-center gap-2">
+              <div className="flex-1">
+                <HealthBar hp={match.yourHp} label="HP" />
+              </div>
+              <EnergyBar energy={match.yourEnergy} />
             </div>
           </div>
         </div>
