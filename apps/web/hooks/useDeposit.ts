@@ -2,10 +2,14 @@
 
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useWriteContract, useWaitForTransactionReceipt, useAccount, useReadContract } from "wagmi";
-import { parseUnits } from "viem";
+import { parseUnits, maxUint256 } from "viem";
 import { WAGER_WARS_ADDRESS, WAGER_WARS_ABI, USDC_ADDRESS, ERC20_ABI } from "@/lib/contracts";
 
 export type DepositStep = "idle" | "approving" | "waiting_approve" | "depositing" | "waiting_deposit" | "done" | "error";
+export type UnlimitedApproveStep = "idle" | "approving" | "waiting" | "done" | "error";
+
+// If allowance > this threshold, consider it "unlimited" (1 trillion USDC in 6-decimal raw units)
+const UNLIMITED_THRESHOLD = BigInt("1000000000000000000");
 
 interface UseDepositReturn {
   step: DepositStep;
@@ -15,6 +19,10 @@ interface UseDepositReturn {
   createMatchOnChain: (onChainMatchId: `0x${string}`, wagerAmount: number) => void;
   joinMatchOnChain: (onChainMatchId: `0x${string}`, wagerAmount: number) => void;
   reset: () => void;
+  hasUnlimitedApproval: boolean;
+  unlimitedApproveStep: UnlimitedApproveStep;
+  unlimitedApproveError: string | null;
+  approveUnlimited: () => void;
 }
 
 type PendingDeposit =
@@ -25,6 +33,10 @@ export function useDeposit(): UseDepositReturn {
   const { address } = useAccount();
   const [step, setStep] = useState<DepositStep>("idle");
   const [error, setError] = useState<string | null>(null);
+
+  // Unlimited approve state
+  const [unlimitedApproveStep, setUnlimitedApproveStep] = useState<UnlimitedApproveStep>("idle");
+  const [unlimitedApproveError, setUnlimitedApproveError] = useState<string | null>(null);
 
   // Store pending deposit params so the approve-confirmed effect can use them
   const pendingDepositRef = useRef<PendingDeposit | null>(null);
@@ -49,6 +61,59 @@ export function useDeposit(): UseDepositReturn {
     data: depositTxHash,
     reset: resetDeposit,
   } = useWriteContract();
+
+  const {
+    writeContract: writeUnlimitedApprove,
+    data: unlimitedApproveTxHash,
+    reset: resetUnlimitedApprove,
+  } = useWriteContract();
+
+  // Detect if user already has unlimited approval
+  const hasUnlimitedApproval =
+    currentAllowance !== undefined && (currentAllowance as bigint) >= UNLIMITED_THRESHOLD;
+
+  // Wait for unlimited approve tx
+  const { isSuccess: unlimitedApproveConfirmed, isError: unlimitedApproveReverted } =
+    useWaitForTransactionReceipt({ hash: unlimitedApproveTxHash });
+
+  useEffect(() => {
+    if (unlimitedApproveConfirmed && unlimitedApproveStep === "waiting") {
+      setUnlimitedApproveStep("done");
+      refetchAllowance();
+      // Auto-clear "done" after 3s
+      const timer = setTimeout(() => setUnlimitedApproveStep("idle"), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [unlimitedApproveConfirmed, unlimitedApproveStep, refetchAllowance]);
+
+  useEffect(() => {
+    if (unlimitedApproveReverted && unlimitedApproveStep === "waiting") {
+      setUnlimitedApproveError("Approve transaction reverted on-chain");
+      setUnlimitedApproveStep("error");
+    }
+  }, [unlimitedApproveReverted, unlimitedApproveStep]);
+
+  const approveUnlimited = useCallback(() => {
+    if (!address) return;
+    setUnlimitedApproveError(null);
+    setUnlimitedApproveStep("approving");
+    resetUnlimitedApprove();
+    writeUnlimitedApprove(
+      {
+        address: USDC_ADDRESS,
+        abi: ERC20_ABI,
+        functionName: "approve",
+        args: [WAGER_WARS_ADDRESS, maxUint256],
+      },
+      {
+        onSuccess: () => setUnlimitedApproveStep("waiting"),
+        onError: (err) => {
+          setUnlimitedApproveError(err.message.slice(0, 300));
+          setUnlimitedApproveStep("error");
+        },
+      },
+    );
+  }, [address, writeUnlimitedApprove, resetUnlimitedApprove]);
 
   // Wait for approve tx to be confirmed ON-CHAIN
   const { isSuccess: approveConfirmed, isError: approveReverted } = useWaitForTransactionReceipt({
@@ -202,5 +267,9 @@ export function useDeposit(): UseDepositReturn {
     createMatchOnChain: doCreate,
     joinMatchOnChain: doJoin,
     reset,
+    hasUnlimitedApproval,
+    unlimitedApproveStep,
+    unlimitedApproveError,
+    approveUnlimited,
   };
 }

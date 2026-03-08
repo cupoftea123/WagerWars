@@ -495,6 +495,51 @@ export default function LobbyPage() {
         </div>
       )}
 
+      {/* Unlimited Approve */}
+      {isAuthenticated && !deposit.hasUnlimitedApproval && deposit.unlimitedApproveStep !== "done" && (
+        <div className="rounded-xl border border-green-500/15 bg-green-900/5 p-4 mb-6">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-8 h-8 rounded-full bg-green-500/10 border border-green-500/20 flex items-center justify-center flex-shrink-0">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                  <path d="M9 1L3 9h5l-1 6 7-8H9l1-6z" fill="#22c55e" />
+                </svg>
+              </div>
+              <div className="min-w-0">
+                <p className="text-green-400 text-sm font-bold">Enable Fast Deposits</p>
+                <p className="text-gray-500 text-xs mt-0.5">
+                  Approve USDC once — skip the approve step in every future match (1 tx instead of 2).
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={deposit.approveUnlimited}
+              disabled={deposit.unlimitedApproveStep === "approving" || deposit.unlimitedApproveStep === "waiting"}
+              className="bg-green-600/20 hover:bg-green-600/30 border border-green-500/30 disabled:opacity-50 disabled:cursor-not-allowed text-green-400 font-bold text-sm py-2 px-5 rounded-xl transition-all flex-shrink-0"
+            >
+              {deposit.unlimitedApproveStep === "approving"
+                ? "Confirm..."
+                : deposit.unlimitedApproveStep === "waiting"
+                  ? "Waiting..."
+                  : "Approve"}
+            </button>
+          </div>
+          {deposit.unlimitedApproveError && (
+            <p className="text-red-400 text-xs mt-2">{deposit.unlimitedApproveError}</p>
+          )}
+        </div>
+      )}
+      {deposit.unlimitedApproveStep === "done" && (
+        <div className="rounded-xl border border-green-500/20 bg-green-900/10 p-3 mb-6 flex items-center gap-2">
+          <div className="w-4 h-4 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0">
+            <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
+              <path d="M2 6l3 3 5-5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </div>
+          <p className="text-green-400 text-sm font-bold">Fast deposits enabled! Only 1 transaction per match now.</p>
+        </div>
+      )}
+
       {/* Create Match */}
       <div className="glass-card rounded-2xl p-6 mb-8">
         <h2 className="text-lg font-bold mb-4">Create Match</h2>
