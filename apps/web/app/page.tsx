@@ -155,9 +155,9 @@ export default function HomePage() {
           </p>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <ModifierCard name="Power Surge" effect="All damage doubled" color="text-red-400" bgColor="bg-red-500/5 border-red-500/20" icon={<ZapIcon />} />
-            <ModifierCard name="Overcharge" effect="Recover grants +6 energy" color="text-yellow-400" bgColor="bg-yellow-500/5 border-yellow-500/20" icon={<BatteryIcon />} />
+            <ModifierCard name="Overcharge" effect="Recover grants +6 energy" color="text-green-400" bgColor="bg-green-500/5 border-green-500/20" icon={<BatteryIcon />} />
             <ModifierCard name="Reflect" effect="Shield reflects 3 damage" color="text-cyan-400" bgColor="bg-cyan-500/5 border-cyan-500/20" icon={<MirrorIcon />} />
-            <ModifierCard name="Tax" effect="All actions cost +1 energy" color="text-orange-400" bgColor="bg-orange-500/5 border-orange-500/20" icon={<CoinsIcon />} />
+            <ModifierCard name="Tax" effect="All actions cost +1 energy" color="text-yellow-400" bgColor="bg-yellow-500/5 border-yellow-500/20" icon={<CoinsIcon />} />
           </div>
         </div>
       </section>
@@ -374,11 +374,11 @@ function ZapIcon() {
   return <svg width="20" height="20" viewBox="0 0 16 16" fill="none"><path d="M9 1L3 9h5l-1 6 7-8H9l1-6z" fill="#ef4444" opacity="0.8"/></svg>;
 }
 function BatteryIcon() {
-  return <svg width="20" height="20" viewBox="0 0 16 16" fill="none"><rect x="4" y="3" width="8" height="10" rx="1" stroke="#eab308" strokeWidth="1.5" fill="none"/><rect x="6" y="1" width="4" height="2" rx="0.5" fill="#eab308"/><rect x="6" y="6" width="4" height="4" rx="0.5" fill="#eab308" opacity="0.6"/></svg>;
+  return <svg width="20" height="20" viewBox="0 0 16 16" fill="none"><rect x="4" y="3" width="8" height="10" rx="1" stroke="#22c55e" strokeWidth="1.5" fill="none"/><rect x="6" y="1" width="4" height="2" rx="0.5" fill="#22c55e"/><rect x="6" y="6" width="4" height="4" rx="0.5" fill="#22c55e" opacity="0.6"/></svg>;
 }
 function MirrorIcon() {
   return <svg width="20" height="20" viewBox="0 0 16 16" fill="none"><path d="M4 2L12 8 4 14Z" stroke="#06b6d4" strokeWidth="1.5" fill="none" strokeLinejoin="round"/><path d="M8 5L12 8 8 11" stroke="#06b6d4" strokeWidth="1" opacity="0.5"/></svg>;
 }
 function CoinsIcon() {
-  return <svg width="20" height="20" viewBox="0 0 16 16" fill="none"><circle cx="6" cy="6" r="3" stroke="#f97316" strokeWidth="1.5" fill="none"/><circle cx="10" cy="10" r="3" stroke="#f97316" strokeWidth="1.5" fill="none"/></svg>;
+  return <svg width="20" height="20" viewBox="0 0 16 16" fill="none"><circle cx="5.5" cy="7" r="3.5" stroke="#eab308" strokeWidth="1.3" fill="none"/><text x="5.5" y="9" textAnchor="middle" fill="#eab308" fontSize="5" fontWeight="bold">$</text><circle cx="10.5" cy="9" r="3.5" stroke="#eab308" strokeWidth="1.3" fill="none"/><text x="10.5" y="11" textAnchor="middle" fill="#eab308" fontSize="5" fontWeight="bold">$</text></svg>;
 }
