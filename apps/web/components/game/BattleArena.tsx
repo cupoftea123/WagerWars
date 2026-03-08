@@ -418,7 +418,7 @@ export function BattleArena({ matchId }: BattleArenaProps) {
             </div>
             <div className="flex items-center gap-2">
               <div className="flex-1">
-                <HealthBar hp={match.opponentHp} label="HP" reversed />
+                <HealthBar hp={match.opponentHp} label="HP" />
               </div>
               <EnergyBar energy={match.opponentEnergy} />
             </div>
