@@ -324,7 +324,7 @@ export function BattleArena({ matchId }: BattleArenaProps) {
   const hasModifier = match.modifier && match.modifier !== RoundModifier.None;
 
   return (
-    <div className={`relative space-y-4 ${effects.shaking ? "animate-shake" : ""}`}>
+    <div className={`relative ${effects.shaking ? "animate-shake" : ""}`}>
       {/* Global effects */}
       <DamageFlash type={effects.flashType} />
       <FloatingDamageNumbers numbers={effects.damageNumbers} />
@@ -332,7 +332,7 @@ export function BattleArena({ matchId }: BattleArenaProps) {
 
       {/* Demo Badge */}
       {match.isDemo && (
-        <div className="text-center">
+        <div className="text-center mb-2">
           <span className="inline-flex items-center gap-2 bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 text-xs font-bold px-3 py-1 rounded-full">
             <div className="w-1.5 h-1.5 rounded-full bg-yellow-400" />
             DEMO MATCH
@@ -341,9 +341,24 @@ export function BattleArena({ matchId }: BattleArenaProps) {
       )}
 
       {/* ── Round Header ── */}
-      <div className="text-center">
-        {/* Round dots */}
-        <div className="flex items-center justify-center gap-2 mb-3">
+      <div className="text-center mb-3">
+        {/* Modifier badge (above round dots) */}
+        {hasModifier && (
+          <div className="mb-2">
+            <div
+              className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border ${modInfo.bgColor} animate-modifier-glow`}
+              style={{ "--modifier-color": modInfo.glowColor } as React.CSSProperties}
+            >
+              <ModifierIcon modifier={modKey} />
+              <div className="text-left">
+                <div className={`text-xs font-black ${modInfo.color}`}>{modInfo.label}</div>
+                <div className="text-[10px] text-gray-400">{modInfo.description}</div>
+              </div>
+            </div>
+          </div>
+        )}
+        {/* Round dots + Timer */}
+        <div className="flex items-center justify-center gap-1.5 md:gap-2">
           {Array.from({ length: 7 }, (_, i) => {
             const roundNum = i + 1;
             const isPast = roundNum < match.round;
@@ -353,203 +368,189 @@ export function BattleArena({ matchId }: BattleArenaProps) {
                 key={i}
                 className={`rounded-full transition-all duration-300 ${
                   isCurrent
-                    ? "w-8 h-8 bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center shadow-lg shadow-red-500/30"
+                    ? "w-7 h-7 md:w-8 md:h-8 bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center shadow-lg shadow-red-500/30"
                     : isPast
-                      ? "w-3 h-3 bg-red-500/60"
-                      : "w-3 h-3 bg-gray-700"
+                      ? "w-2.5 h-2.5 md:w-3 md:h-3 bg-red-500/60"
+                      : "w-2.5 h-2.5 md:w-3 md:h-3 bg-gray-700"
                 }`}
               >
-                {isCurrent && <span className="text-xs font-black text-white">{roundNum}</span>}
+                {isCurrent && <span className="text-[10px] md:text-xs font-black text-white">{roundNum}</span>}
               </div>
             );
           })}
-        </div>
-
-        {/* Modifier badge */}
-        {hasModifier && (
-          <div
-            className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl border ${modInfo.bgColor} animate-modifier-glow`}
-            style={{ "--modifier-color": modInfo.glowColor } as React.CSSProperties}
-          >
-            <ModifierIcon modifier={modKey} />
-            <div className="text-left">
-              <div className={`text-xs font-black ${modInfo.color}`}>{modInfo.label}</div>
-              <div className="text-[10px] text-gray-400">{modInfo.description}</div>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* ── Opponent Card ── */}
-      <div className="glass-card rounded-2xl p-4 relative overflow-hidden">
-        {/* Subtle gradient top */}
-        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-red-500/30 to-transparent" />
-
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-3">
-            {/* Avatar */}
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-red-500/30 to-red-600/10 border border-red-500/20 flex items-center justify-center">
-              <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-                <circle cx="9" cy="6" r="3" stroke="#ef4444" strokeWidth="1.5" fill="none" />
-                <path d="M3 16C3 13 6 11 9 11C12 11 15 13 15 16" stroke="#ef4444" strokeWidth="1.5" strokeLinecap="round" fill="none" />
-              </svg>
-            </div>
-            <div>
-              <div className="text-sm font-bold text-gray-200">Opponent</div>
-              {match.opponentCommitted && match.phase === "commit" && (
-                <div className="flex items-center gap-1 mt-0.5">
-                  <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-                  <span className="text-[10px] text-green-400 font-medium">Move locked</span>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Timer */}
           {(match.phase === "commit" || match.phase === "reveal") && (
-            <CircleTimer
-              key={timerKey}
-              duration={match.phase === "commit" ? match.commitTimeout : REVEAL_TIMEOUT}
-              size={44}
-              strokeWidth={3}
-            />
+            <div className="ml-2">
+              <CircleTimer
+                key={timerKey}
+                duration={match.phase === "commit" ? match.commitTimeout : REVEAL_TIMEOUT}
+                size={36}
+                strokeWidth={2.5}
+              />
+            </div>
           )}
         </div>
-
-        <HealthBar hp={match.opponentHp} label="HP" reversed />
-        <div className="mt-2">
-          <EnergyBar energy={match.opponentEnergy} label="Energy" />
-        </div>
       </div>
 
-      {/* ── Center Arena Area ── */}
-      <div className="relative">
-        {/* VS divider */}
-        <div className="flex items-center gap-3 my-1">
-          <div className="flex-1 h-px bg-gradient-to-r from-transparent to-white/10" />
-          <div className="text-xs font-black text-gray-500 tracking-widest">VS</div>
-          <div className="flex-1 h-px bg-gradient-to-l from-transparent to-white/10" />
-        </div>
-      </div>
+      {/* ── Main Battle Layout ── */}
+      {/* Mobile: vertical stack | Desktop: 3-column (You | Center | Opponent) */}
+      <div className="flex flex-col gap-2.5 md:grid md:grid-cols-[200px_1fr_200px] lg:grid-cols-[220px_1fr_220px] md:gap-4 md:items-start">
 
-      {/* ── Action Phase ── */}
-      <div
-        className={`glass-card rounded-2xl p-4 relative overflow-hidden ${hasModifier && match.phase === "commit" ? "animate-modifier-glow" : ""}`}
-        style={hasModifier && match.phase === "commit" ? { "--modifier-color": modInfo.glowColor } as React.CSSProperties : undefined}
-      >
-        {/* Phase-dependent background accent */}
-        {match.phase === "commit" && !match.selectedAction && hasModifier && (
-          <div
-            className="absolute inset-0 pointer-events-none animate-modifier-bg-pulse"
-            style={{ background: `radial-gradient(ellipse at center, ${modInfo.glowColor}, transparent 70%)` }}
-          />
-        )}
-        {match.phase === "commit" && !match.selectedAction && !hasModifier && (
-          <div className="absolute inset-0 bg-gradient-to-b from-red-500/[0.03] to-transparent pointer-events-none" />
-        )}
-
-        {match.phase === "commit" && (
-          <>
-            <div className="text-center mb-4">
-              {match.selectedAction ? (
-                <div className="flex items-center justify-center gap-2">
-                  <div className="w-4 h-4 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin" />
-                  <span className="text-sm text-gray-300">
-                    Waiting for opponent...
-                  </span>
-                </div>
-              ) : (
-                <div className="text-sm font-bold text-gray-300">Choose your action</div>
-              )}
-            </div>
-            <div className="relative">
-              <ActionSelector
-                energy={match.yourEnergy}
-                modifier={match.modifier}
-                onSelect={match.commitAction}
-                disabled={!match.isYourTurn}
-                selectedAction={match.selectedAction}
-              />
-              {/* Modifier icon floating in center of the 2x2 grid */}
-              {hasModifier && !match.selectedAction && (
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
-                  <div
-                    className={`w-10 h-10 rounded-full flex items-center justify-center border animate-modifier-glow ${modInfo.bgColor}`}
-                    style={{ "--modifier-color": modInfo.glowColor } as React.CSSProperties}
-                  >
-                    <ModifierIcon modifier={modKey} size={22} />
-                  </div>
-                </div>
-              )}
-            </div>
-          </>
-        )}
-
-        {(match.phase === "reveal" || match.phase === "resolving") && (
-          <div className="text-center py-6">
-            <div className="flex items-center justify-center gap-3">
-              <div className="relative w-12 h-12">
-                <div className="absolute inset-0 rounded-full border-2 border-red-500/30 animate-ping" />
-                <div className="absolute inset-0 rounded-full border-2 border-red-500 animate-spin" style={{ borderTopColor: "transparent", borderLeftColor: "transparent" }} />
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-3 h-3 rounded-full bg-red-500/60" />
-                </div>
+        {/* ── Opponent Card ── */}
+        <div className="order-1 md:order-none md:col-start-3 md:row-start-1 md:row-span-2">
+          <div className="glass-card rounded-2xl p-3 md:p-4 relative overflow-hidden">
+            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-red-500/30 to-transparent" />
+            <div className="flex items-center gap-2 md:gap-3 mb-2 md:mb-3">
+              <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-gradient-to-br from-red-500/30 to-red-600/10 border border-red-500/20 flex items-center justify-center">
+                <svg width="16" height="16" viewBox="0 0 18 18" fill="none">
+                  <circle cx="9" cy="6" r="3" stroke="#ef4444" strokeWidth="1.5" fill="none" />
+                  <path d="M3 16C3 13 6 11 9 11C12 11 15 13 15 16" stroke="#ef4444" strokeWidth="1.5" strokeLinecap="round" fill="none" />
+                </svg>
               </div>
-              <span className="text-lg font-bold text-gray-300">Resolving round...</span>
+              <div>
+                <div className="text-xs md:text-sm font-bold text-gray-200">Opponent</div>
+                {match.opponentCommitted && match.phase === "commit" && (
+                  <div className="flex items-center gap-1 mt-0.5">
+                    <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+                    <span className="text-[10px] text-green-400 font-medium">Move locked</span>
+                  </div>
+                )}
+              </div>
+            </div>
+            <HealthBar hp={match.opponentHp} label="HP" reversed />
+            <div className="mt-1.5 md:mt-2">
+              <EnergyBar energy={match.opponentEnergy} label="Energy" />
             </div>
           </div>
-        )}
-      </div>
+        </div>
 
-      {/* ── Your Card ── */}
-      <div className="glass-card rounded-2xl p-4 relative overflow-hidden">
-        {/* Subtle gradient bottom */}
-        <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-blue-500/30 to-transparent" />
-
-        <div className="flex items-center gap-3 mb-3">
-          {/* Avatar */}
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500/30 to-blue-600/10 border border-blue-500/20 flex items-center justify-center">
-            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-              <circle cx="9" cy="6" r="3" stroke="#3b82f6" strokeWidth="1.5" fill="none" />
-              <path d="M3 16C3 13 6 11 9 11C12 11 15 13 15 16" stroke="#3b82f6" strokeWidth="1.5" strokeLinecap="round" fill="none" />
-            </svg>
+        {/* ── VS Divider (mobile only) ── */}
+        <div className="order-2 md:hidden">
+          <div className="flex items-center gap-3">
+            <div className="flex-1 h-px bg-gradient-to-r from-transparent to-white/10" />
+            <div className="text-xs font-black text-gray-500 tracking-widest">VS</div>
+            <div className="flex-1 h-px bg-gradient-to-l from-transparent to-white/10" />
           </div>
-          <div>
-            <div className="text-sm font-bold text-gray-200">You</div>
-            {match.selectedAction && (
-              <div className="flex items-center gap-1 mt-0.5">
-                <div className="w-1.5 h-1.5 rounded-full bg-green-400" />
-                <span className="text-[10px] text-green-400 font-medium">{match.selectedAction}</span>
+        </div>
+
+        {/* ── Action Phase (center column) ── */}
+        <div className="order-3 md:order-none md:col-start-2 md:row-start-1">
+          <div
+            className={`glass-card rounded-2xl p-3 md:p-4 relative overflow-hidden ${hasModifier && match.phase === "commit" ? "animate-modifier-glow" : ""}`}
+            style={hasModifier && match.phase === "commit" ? { "--modifier-color": modInfo.glowColor } as React.CSSProperties : undefined}
+          >
+            {match.phase === "commit" && !match.selectedAction && hasModifier && (
+              <div
+                className="absolute inset-0 pointer-events-none animate-modifier-bg-pulse"
+                style={{ background: `radial-gradient(ellipse at center, ${modInfo.glowColor}, transparent 70%)` }}
+              />
+            )}
+            {match.phase === "commit" && !match.selectedAction && !hasModifier && (
+              <div className="absolute inset-0 bg-gradient-to-b from-red-500/[0.03] to-transparent pointer-events-none" />
+            )}
+
+            {match.phase === "commit" && (
+              <>
+                <div className="text-center mb-3">
+                  {match.selectedAction ? (
+                    <div className="flex items-center justify-center gap-2">
+                      <div className="w-4 h-4 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin" />
+                      <span className="text-sm text-gray-300">Waiting for opponent...</span>
+                    </div>
+                  ) : (
+                    <div className="text-sm font-bold text-gray-300">Choose your action</div>
+                  )}
+                </div>
+                <div className="relative">
+                  <ActionSelector
+                    energy={match.yourEnergy}
+                    modifier={match.modifier}
+                    onSelect={match.commitAction}
+                    disabled={!match.isYourTurn}
+                    selectedAction={match.selectedAction}
+                  />
+                  {hasModifier && !match.selectedAction && (
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
+                      <div
+                        className={`w-10 h-10 rounded-full flex items-center justify-center border animate-modifier-glow ${modInfo.bgColor}`}
+                        style={{ "--modifier-color": modInfo.glowColor } as React.CSSProperties}
+                      >
+                        <ModifierIcon modifier={modKey} size={22} />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+
+            {(match.phase === "reveal" || match.phase === "resolving") && (
+              <div className="text-center py-4 md:py-6">
+                <div className="flex items-center justify-center gap-3">
+                  <div className="relative w-10 h-10 md:w-12 md:h-12">
+                    <div className="absolute inset-0 rounded-full border-2 border-red-500/30 animate-ping" />
+                    <div className="absolute inset-0 rounded-full border-2 border-red-500 animate-spin" style={{ borderTopColor: "transparent", borderLeftColor: "transparent" }} />
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="w-2.5 h-2.5 md:w-3 md:h-3 rounded-full bg-red-500/60" />
+                    </div>
+                  </div>
+                  <span className="text-base md:text-lg font-bold text-gray-300">Resolving round...</span>
+                </div>
               </div>
             )}
           </div>
         </div>
 
-        <HealthBar hp={match.yourHp} label="HP" />
-        <div className="mt-2">
-          <EnergyBar energy={match.yourEnergy} label="Energy" />
+        {/* ── Your Card ── */}
+        <div className="order-4 md:order-none md:col-start-1 md:row-start-1 md:row-span-2">
+          <div className="glass-card rounded-2xl p-3 md:p-4 relative overflow-hidden">
+            <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-blue-500/30 to-transparent" />
+            <div className="flex items-center gap-2 md:gap-3 mb-2 md:mb-3">
+              <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-gradient-to-br from-blue-500/30 to-blue-600/10 border border-blue-500/20 flex items-center justify-center">
+                <svg width="16" height="16" viewBox="0 0 18 18" fill="none">
+                  <circle cx="9" cy="6" r="3" stroke="#3b82f6" strokeWidth="1.5" fill="none" />
+                  <path d="M3 16C3 13 6 11 9 11C12 11 15 13 15 16" stroke="#3b82f6" strokeWidth="1.5" strokeLinecap="round" fill="none" />
+                </svg>
+              </div>
+              <div>
+                <div className="text-xs md:text-sm font-bold text-gray-200">You</div>
+                {match.selectedAction && (
+                  <div className="flex items-center gap-1 mt-0.5">
+                    <div className="w-1.5 h-1.5 rounded-full bg-green-400" />
+                    <span className="text-[10px] text-green-400 font-medium">{match.selectedAction}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+            <HealthBar hp={match.yourHp} label="HP" />
+            <div className="mt-1.5 md:mt-2">
+              <EnergyBar energy={match.yourEnergy} label="Energy" />
+            </div>
+          </div>
         </div>
-      </div>
 
-      {/* ── Round History ── */}
-      <RoundHistory results={match.roundResults} playerSlot={match.playerSlot} />
-
-      {/* ── Error ── */}
-      {match.error && (
-        <div className="rounded-xl border border-red-500/30 bg-red-900/20 p-3 text-red-400 text-sm flex items-center gap-2">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.5"/><line x1="8" y1="4" x2="8" y2="9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/><circle cx="8" cy="12" r="1" fill="currentColor"/></svg>
-          {match.error}
+        {/* ── Round History (center column) ── */}
+        <div className="order-5 md:order-none md:col-start-2 md:row-start-2">
+          <RoundHistory results={match.roundResults} playerSlot={match.playerSlot} />
         </div>
-      )}
 
-      {/* ── Forfeit ── */}
-      <div className="text-center pt-2">
-        <button
-          onClick={match.forfeit}
-          className="text-gray-600 hover:text-red-400 text-xs transition-colors"
-        >
-          Forfeit Match
-        </button>
+        {/* ── Error ── */}
+        {match.error && (
+          <div className="order-6 md:order-none md:col-start-2">
+            <div className="rounded-xl border border-red-500/30 bg-red-900/20 p-2.5 text-red-400 text-sm flex items-center gap-2">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.5"/><line x1="8" y1="4" x2="8" y2="9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/><circle cx="8" cy="12" r="1" fill="currentColor"/></svg>
+              {match.error}
+            </div>
+          </div>
+        )}
+
+        {/* ── Forfeit ── */}
+        <div className="order-7 md:order-none md:col-start-2 text-center pt-1">
+          <button
+            onClick={match.forfeit}
+            className="text-gray-600 hover:text-red-400 text-xs transition-colors"
+          >
+            Forfeit Match
+          </button>
+        </div>
       </div>
     </div>
   );

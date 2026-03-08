@@ -26,7 +26,7 @@ export function WalletButton({ showBalance = true }: { showBalance?: boolean }) 
 
   return (
     <div className="flex items-center gap-2">
-      <span className="text-sm text-gray-300 font-mono">{formatted} USDC</span>
+      <span className="text-xs text-gray-300 font-mono hidden sm:inline">{formatted} USDC</span>
       <ConnectButton showBalance={false} />
     </div>
   );

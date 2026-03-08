@@ -8,7 +8,7 @@ export default function MatchPage({ params }: { params: { matchId: string } }) {
   const { matchId } = params;
 
   return (
-    <main className="flex-1 max-w-lg mx-auto w-full px-4 py-6">
+    <main className="flex-1 max-w-lg md:max-w-4xl mx-auto w-full px-4 py-4 md:py-6">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <Link href="/" className="group flex items-center gap-1.5">
