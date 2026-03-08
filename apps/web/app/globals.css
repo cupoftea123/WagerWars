@@ -207,3 +207,12 @@ body {
 .animate-selected-pulse {
   animation: selected-action-pulse 1.5s ease-in-out infinite;
 }
+
+@keyframes modifier-bg-pulse {
+  0%, 100% { opacity: 0.08; }
+  50% { opacity: 0.18; }
+}
+
+.animate-modifier-bg-pulse {
+  animation: modifier-bg-pulse 2.5s ease-in-out infinite;
+}

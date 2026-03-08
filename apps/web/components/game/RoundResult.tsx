@@ -11,9 +11,9 @@ interface RoundResultProps {
 const MODIFIER_ICONS: Record<string, { icon: string; color: string }> = {
   NONE: { icon: "", color: "" },
   POWER_SURGE: { icon: "zap", color: "text-red-400" },
-  OVERCHARGE: { icon: "battery", color: "text-yellow-400" },
+  OVERCHARGE: { icon: "battery", color: "text-green-400" },
   REFLECT: { icon: "mirror", color: "text-cyan-400" },
-  TAX: { icon: "coins", color: "text-orange-400" },
+  TAX: { icon: "coins", color: "text-yellow-400" },
 };
 
 function ActionBadge({ action }: { action: Action }) {
@@ -79,9 +79,9 @@ export function RoundHistory({ results, playerSlot }: RoundResultProps) {
               {r.modifier !== RoundModifier.None && (
                 <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
                   r.modifier === RoundModifier.PowerSurge ? "bg-red-400" :
-                  r.modifier === RoundModifier.Overcharge ? "bg-yellow-400" :
+                  r.modifier === RoundModifier.Overcharge ? "bg-green-400" :
                   r.modifier === RoundModifier.Reflect ? "bg-cyan-400" :
-                  "bg-orange-400"
+                  "bg-yellow-400"
                 }`} title={r.modifier} />
               )}
             </div>

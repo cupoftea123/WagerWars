@@ -25,9 +25,9 @@ import { RoundModifier } from "@wager-wars/shared";
 const MODIFIER_INFO: Record<string, { label: string; description: string; color: string; bgColor: string; glowColor: string }> = {
   NONE: { label: "Normal Round", description: "No modifier active", color: "text-gray-400", bgColor: "bg-gray-500/10 border-gray-500/20", glowColor: "rgba(107,114,128,0.1)" },
   POWER_SURGE: { label: "Power Surge", description: "All damage doubled!", color: "text-red-400", bgColor: "bg-red-500/10 border-red-500/30", glowColor: "rgba(239,68,68,0.3)" },
-  OVERCHARGE: { label: "Overcharge", description: "Recover grants +6 energy", color: "text-yellow-400", bgColor: "bg-yellow-500/10 border-yellow-500/30", glowColor: "rgba(234,179,8,0.3)" },
+  OVERCHARGE: { label: "Overcharge", description: "Recover grants +6 energy", color: "text-green-400", bgColor: "bg-green-500/10 border-green-500/30", glowColor: "rgba(34,197,94,0.3)" },
   REFLECT: { label: "Reflect", description: "Shield reflects 3 damage", color: "text-cyan-400", bgColor: "bg-cyan-500/10 border-cyan-500/30", glowColor: "rgba(6,182,212,0.3)" },
-  TAX: { label: "Tax", description: "Actions cost +1 energy", color: "text-orange-400", bgColor: "bg-orange-500/10 border-orange-500/30", glowColor: "rgba(249,115,22,0.3)" },
+  TAX: { label: "Tax", description: "Actions cost +1 energy", color: "text-yellow-400", bgColor: "bg-yellow-500/10 border-yellow-500/30", glowColor: "rgba(234,179,8,0.3)" },
 };
 
 const REVEAL_TIMEOUT = 15;
@@ -433,9 +433,18 @@ export function BattleArena({ matchId }: BattleArenaProps) {
       </div>
 
       {/* ── Action Phase ── */}
-      <div className="glass-card rounded-2xl p-4 relative overflow-hidden">
+      <div
+        className={`glass-card rounded-2xl p-4 relative overflow-hidden ${hasModifier && match.phase === "commit" ? "animate-modifier-glow" : ""}`}
+        style={hasModifier && match.phase === "commit" ? { "--modifier-color": modInfo.glowColor } as React.CSSProperties : undefined}
+      >
         {/* Phase-dependent background accent */}
-        {match.phase === "commit" && !match.selectedAction && (
+        {match.phase === "commit" && !match.selectedAction && hasModifier && (
+          <div
+            className="absolute inset-0 pointer-events-none animate-modifier-bg-pulse"
+            style={{ background: `radial-gradient(ellipse at center, ${modInfo.glowColor}, transparent 70%)` }}
+          />
+        )}
+        {match.phase === "commit" && !match.selectedAction && !hasModifier && (
           <div className="absolute inset-0 bg-gradient-to-b from-red-500/[0.03] to-transparent pointer-events-none" />
         )}
 
@@ -453,13 +462,26 @@ export function BattleArena({ matchId }: BattleArenaProps) {
                 <div className="text-sm font-bold text-gray-300">Choose your action</div>
               )}
             </div>
-            <ActionSelector
-              energy={match.yourEnergy}
-              modifier={match.modifier}
-              onSelect={match.commitAction}
-              disabled={!match.isYourTurn}
-              selectedAction={match.selectedAction}
-            />
+            <div className="relative">
+              <ActionSelector
+                energy={match.yourEnergy}
+                modifier={match.modifier}
+                onSelect={match.commitAction}
+                disabled={!match.isYourTurn}
+                selectedAction={match.selectedAction}
+              />
+              {/* Modifier icon floating in center of the 2x2 grid */}
+              {hasModifier && !match.selectedAction && (
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
+                  <div
+                    className={`w-10 h-10 rounded-full flex items-center justify-center border animate-modifier-glow ${modInfo.bgColor}`}
+                    style={{ "--modifier-color": modInfo.glowColor } as React.CSSProperties}
+                  >
+                    <ModifierIcon modifier={modKey} size={22} />
+                  </div>
+                </div>
+              )}
+            </div>
           </>
         )}
 
@@ -533,8 +555,7 @@ export function BattleArena({ matchId }: BattleArenaProps) {
   );
 }
 
-function ModifierIcon({ modifier }: { modifier: string }) {
-  const size = 16;
+function ModifierIcon({ modifier, size = 16 }: { modifier: string; size?: number }) {
   switch (modifier) {
     case "POWER_SURGE":
       return (
@@ -545,9 +566,9 @@ function ModifierIcon({ modifier }: { modifier: string }) {
     case "OVERCHARGE":
       return (
         <svg width={size} height={size} viewBox="0 0 16 16" fill="none">
-          <rect x="4" y="3" width="8" height="10" rx="1" stroke="#eab308" strokeWidth="1.5" fill="none" />
-          <rect x="6" y="1" width="4" height="2" rx="0.5" fill="#eab308" />
-          <rect x="6" y="6" width="4" height="4" rx="0.5" fill="#eab308" opacity="0.6" />
+          <rect x="4" y="3" width="8" height="10" rx="1" stroke="#22c55e" strokeWidth="1.5" fill="none" />
+          <rect x="6" y="1" width="4" height="2" rx="0.5" fill="#22c55e" />
+          <rect x="6" y="6" width="4" height="4" rx="0.5" fill="#22c55e" opacity="0.6" />
         </svg>
       );
     case "REFLECT":
@@ -560,9 +581,10 @@ function ModifierIcon({ modifier }: { modifier: string }) {
     case "TAX":
       return (
         <svg width={size} height={size} viewBox="0 0 16 16" fill="none">
-          <circle cx="6" cy="6" r="3" stroke="#f97316" strokeWidth="1.5" fill="none" />
-          <circle cx="10" cy="10" r="3" stroke="#f97316" strokeWidth="1.5" fill="none" />
-          <line x1="12" y1="2" x2="4" y2="14" stroke="#f97316" strokeWidth="1.5" strokeLinecap="round" />
+          <circle cx="5.5" cy="7" r="3.5" stroke="#eab308" strokeWidth="1.3" fill="none" />
+          <text x="5.5" y="9" textAnchor="middle" fill="#eab308" fontSize="5" fontWeight="bold">$</text>
+          <circle cx="10.5" cy="9" r="3.5" stroke="#eab308" strokeWidth="1.3" fill="none" />
+          <text x="10.5" y="11" textAnchor="middle" fill="#eab308" fontSize="5" fontWeight="bold">$</text>
         </svg>
       );
     default:
