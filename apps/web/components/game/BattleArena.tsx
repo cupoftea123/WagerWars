@@ -180,7 +180,7 @@ export function BattleArena({ matchId }: BattleArenaProps) {
   if (match.phase === "result") {
     return (
       <div>
-        <RoundHistory results={match.roundResults} />
+        <RoundHistory results={match.roundResults} playerSlot={match.playerSlot} />
         {match.isDemo ? (
           <DemoMatchResult
             winner={match.winner}
@@ -510,7 +510,7 @@ export function BattleArena({ matchId }: BattleArenaProps) {
       </div>
 
       {/* ── Round History ── */}
-      <RoundHistory results={match.roundResults} />
+      <RoundHistory results={match.roundResults} playerSlot={match.playerSlot} />
 
       {/* ── Error ── */}
       {match.error && (
