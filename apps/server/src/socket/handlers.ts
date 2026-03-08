@@ -433,6 +433,14 @@ export function registerHandlers(
     if (slot === null) return;
 
     if (match.isDemo) {
+      match.clearTimers();
+      const demoSlot = match.getPlayerSlot(address)!;
+      const demoOpponent = match.getOpponentSlot(demoSlot);
+      io.to(matchId).emit("match_result", {
+        winner: match.state.players[demoOpponent]?.address || null,
+        winReason: "forfeit",
+        wagerAmount: 0,
+      });
       matchManager.removeMatch(matchId);
       console.log(`[Demo] ${address} forfeited demo match ${matchId} from lobby`);
       return;
@@ -494,13 +502,21 @@ export function registerHandlers(
     const slot = match.getPlayerSlot(address);
     if (slot === null) return;
 
-    // Demo matches — just clean up, no on-chain anything
+    // Demo matches — emit result, then clean up (no on-chain anything)
     if (match.isDemo) {
+      match.clearTimers();
+      const opponentSlot = match.getOpponentSlot(slot);
+      const winnerAddr = match.state.players[opponentSlot]?.address || null;
+      io.to(matchId).emit("match_result", {
+        winner: winnerAddr,
+        winReason: "forfeit",
+        wagerAmount: 0,
+      });
       matchManager.removeMatch(matchId);
       socket.leave(matchId);
       socket.data.currentMatchId = null;
       socket.data.playerSlot = null;
-      console.log(`[Demo] ${address} left demo match ${matchId}`);
+      console.log(`[Demo] ${address} forfeited demo match ${matchId}`);
       return;
     }
 
@@ -690,12 +706,10 @@ export function emitRoundStart(
     });
   }
 
-  // Start commit timer (skip for demo matches — bot responds instantly)
-  if (!match.isDemo) {
-    match.startCommitTimer(() => {
-      handleCommitTimeout(io, matchId, match, matchManager);
-    });
-  }
+  // Start commit timer for all matches (demo included — player can still time out)
+  match.startCommitTimer(() => {
+    handleCommitTimeout(io, matchId, match, matchManager);
+  });
 }
 
 /** Handle commit phase timeout — auto-play Shield (or Recover if can't afford) for timed-out player(s) */
