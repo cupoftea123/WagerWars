@@ -71,8 +71,17 @@ export default function ProfilePage() {
           </div>
           <div className="text-gray-500 text-[10px] uppercase tracking-wider">W / L / D</div>
         </div>
-        <StatCard label="Total Earned" value={`$${stats.totalEarned.toFixed(2)}`} valueColor="text-green-400" />
-        <StatCard label="Total Wagered" value={`$${stats.totalWagered.toFixed(2)}`} />
+        {(() => {
+          const played = stats.wins + stats.losses;
+          const winRate = played > 0 ? Math.round((stats.wins / played) * 100) : 0;
+          return <StatCard label="Win Rate" value={`${winRate}%`} valueColor={winRate >= 50 ? "text-green-400" : "text-red-400"} />;
+        })()}
+        {(() => {
+          const net = stats.totalEarned - stats.totalWagered;
+          const sign = net >= 0 ? "+" : "";
+          const color = net >= 0 ? "text-green-400" : "text-red-400";
+          return <StatCard label="Total Earned" value={`${sign}$${Math.abs(net).toFixed(2)}`} valueColor={color} />;
+        })()}
       </div>
 
       {/* Match History */}
