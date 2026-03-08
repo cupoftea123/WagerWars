@@ -109,11 +109,11 @@ socket/
 
 Key design: All match state is in-memory (no database). Matches auto-cleanup on completion/timeout. Server is authoritative for game logic but all moves are cryptographically signed for onchain verification.
 
-**Server-side timers** (`Match.ts`): `startCommitTimer()` (30s round 1, 15s rounds 2-7), `startRevealTimer()` (15s always), `clearCommitTimer()`, `clearRevealTimer()`, `getCommitTimeout()`. Timeout callbacks in `handlers.ts` (`handleCommitTimeout`, `handleRevealTimeout`) check which player hasn't acted, forfeit them, and trigger auto-settlement. The `round_start` event includes `commitTimeout` so frontend knows the duration. Timers are cleared on both commits, both reveals, match end, or player leaving.
+**Server-side timers** (`Match.ts`): `startCommitTimer()` (30s+3s grace round 1, 20s+3s grace rounds 2-7), `startRevealTimer()` (20s always), `clearCommitTimer()`, `clearRevealTimer()`, `getCommitTimeout()`. Timeout callbacks in `handlers.ts` (`handleCommitTimeout`, `handleRevealTimeout`) auto-play Shield (or Recover if insufficient energy) instead of forfeiting. The `round_start` event includes `commitTimeout` (30 or 20) so frontend knows the display duration. The 3s grace period compensates for network latency. Timers are cleared on both commits, both reveals, match end, or player leaving.
 
 Health check: `GET /health` returns `{ status, activeMatches, uptime }`.
 
-**On-chain event watcher** (`chain/events.ts`): Polls every 5s for `MatchCreated` and `MatchJoined` contract events using `publicClient.getLogs()`. Confirms deposits via `match.markDeposit()`, notifies players via `deposit_confirmed` socket event, and auto-starts the game when both deposits are confirmed. After game starts, calls `notifyAbsentPlayers()` to send `match_started_alert` to players not in the match socket room (e.g., they navigated to lobby).
+**On-chain event watcher** (`chain/events.ts`): Polls every 12s for `MatchCreated` and `MatchJoined` contract events using `publicClient.getLogs()`. Confirms deposits via `match.markDeposit()`, notifies players via `deposit_confirmed` socket event, and auto-starts the game when both deposits are confirmed. After game starts, calls `notifyAbsentPlayers()` to send `match_started_alert` to players not in the match socket room (e.g., they navigated to lobby).
 
 ### Frontend — Next.js 14 (apps/web)
 
@@ -201,8 +201,8 @@ Round 1 always neutral. Remaining modifiers deducible as rounds progress. Round 
 ## Commit-Reveal Flow
 
 ```
-COMMIT (30s round 1, 15s rounds 2-7) → Both send hash(action + salt + round + matchId + address)
-REVEAL (15s) → Both reveal action + salt, server verifies hash matches
+COMMIT (30s round 1, 20s rounds 2-7) → Both send hash(action + salt + round + matchId + address)
+REVEAL (20s) → Both reveal action + salt, server verifies hash matches
 RESOLVE      → Apply damage matrix + modifier, broadcast results
 ```
 
@@ -212,7 +212,7 @@ Prevents cheating: neither player can change their move after seeing opponent's 
 
 **Client → Server:** `authenticate`, `create_match`, `join_match`, `commit`, `reveal`, `leave_match`, `get_open_matches`, `get_match_state`, `get_active_match`, `request_rematch`, `accept_rematch`, `decline_rematch`, `cancel_match`, `forfeit_from_lobby`, `start_demo_match`
 
-**Server → Client:** `authenticated`, `match_created` (includes `isDemo` flag), `match_joined`, `opponent_joined`, `deposit_required`, `deposit_confirmed`, `round_start` (includes `commitTimeout`: 30 or 15), `opponent_committed`, `reveal_phase`, `round_result`, `match_result`, `open_matches`, `active_match`, `match_cancelled`, `match_started_alert`, `rematch_invite`, `rematch_waiting`, `rematch_declined`, `rematch_created`, `error`
+**Server → Client:** `authenticated`, `match_created` (includes `isDemo` flag), `match_joined`, `opponent_joined`, `deposit_required`, `deposit_confirmed`, `round_start` (includes `commitTimeout`: 30 or 20), `opponent_committed`, `reveal_phase`, `round_result`, `match_result`, `open_matches`, `active_match`, `match_cancelled`, `match_started_alert`, `rematch_invite`, `rematch_waiting`, `rematch_declined`, `rematch_created`, `error`
 
 ## Deposit Flow (Allowance Check → Approve → Deposit)
 
@@ -361,6 +361,20 @@ NEXT_PUBLIC_USDC_ADDRESS=0x...
 NEXT_PUBLIC_CHAIN_ID=43113
 ```
 
+## Deployment
+
+- **Frontend**: Vercel (`wager-wars-web.vercel.app`) — root directory `apps/web`, config in `apps/web/vercel.json`
+- **Server**: Railway (`wager-warsserver-production.up.railway.app`) — config in `railway.json`
+- **Contract**: Avalanche Fuji — `0x1e5059377b119d63635e6874954FDaC261f2d4fE`
+- **USDC (Fuji)**: `0x5425890298aed601595a70AB815c96711a31Bc65`
+- **GitHub**: `https://github.com/cupoftea123/WagerWars`
+
+Both auto-deploy on push to `main`.
+
+### WebSocket transport
+
+Socket.io is configured as **WebSocket-only** (no HTTP long-polling fallback) on both client (`lib/socket.ts`) and server (`index.ts`). This is critical for performance — Railway's reverse proxy adds 2-5s latency per message with long-polling, making gameplay unplayable. The `transports: ["websocket"]` setting ensures instant message delivery (~50ms).
+
 ## Key Architecture Decisions
 
 1. **EIP-712 settlement** — Server signs match result offchain. Anyone can submit onchain. Only 2 txs per match (deposit + settle).
@@ -388,8 +402,8 @@ Server generates a UUID for internal tracking. The onchain `matchId` is `keccak2
 ### Timeout behavior — server-enforced, auto-play (NOT forfeit)
 Timers run server-side via `setTimeout` in `Match.ts`. Frontend receives `commitTimeout` in `round_start` event and displays `CircleTimer` accordingly.
 
-- **Commit timeout**: 30s for round 1, 15s for rounds 2-7. `handleCommitTimeout()` auto-commits + auto-reveals **Shield** for the timed-out player (or **Recover** if not enough energy for Shield). The round then resolves normally.
-- **Reveal timeout**: 15s always. `handleRevealTimeout()` force-reveals **Shield** (or **Recover**) via `match.forceReveal()` (bypasses hash verification since original commit is unknown). Round resolves normally.
+- **Commit timeout**: 30s+3s grace for round 1, 20s+3s grace for rounds 2-7. `handleCommitTimeout()` auto-commits + auto-reveals **Shield** for the timed-out player (or **Recover** if not enough energy for Shield). The round then resolves normally.
+- **Reveal timeout**: 20s always. `handleRevealTimeout()` force-reveals **Shield** (or **Recover**) via `match.forceReveal()` (bypasses hash verification since original commit is unknown). Round resolves normally.
 - **Default action logic** (`Match.getDefaultTimeoutAction`): Shield (cost 2, or 3 with Tax) if affordable, else Recover (cost 0, or 1 with Tax). Recover is always affordable except with Tax modifier and 0 energy (extremely rare).
 - **Timer lifecycle**: Commit timer starts on `round_start`. Cleared when both commit → reveal timer starts. Cleared when both reveal. All timers cleared on match end or player leave.
 - **`resolveAndAdvance()`**: Shared helper used by both timeout handlers and the normal reveal flow. Resolves round, emits `round_result`, checks for match end (settlement) or starts next round.
