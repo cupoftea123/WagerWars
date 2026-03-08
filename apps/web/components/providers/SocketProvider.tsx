@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import { type Socket } from "socket.io-client";
 import { connectSocket, disconnectSocket } from "@/lib/socket";
 import { useAccount, useSignMessage } from "wagmi";
@@ -46,20 +46,51 @@ interface SocketContextValue {
   socket: Socket | null;
   isConnected: boolean;
   isAuthenticated: boolean;
+  needsSignature: boolean;
+  requestSignature: () => void;
 }
 
 const SocketContext = createContext<SocketContextValue>({
   socket: null,
   isConnected: false,
   isAuthenticated: false,
+  needsSignature: false,
+  requestSignature: () => {},
 });
 
 export function SocketProvider({ children }: { children: ReactNode }) {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const { address, isConnected: walletConnected } = useAccount();
+  const [needsSignature, setNeedsSignature] = useState(false);
+  const { address, isConnected: walletConnected, connector } = useAccount();
   const { signMessageAsync } = useSignMessage();
+
+  // Detect if using WalletConnect (mobile wallets)
+  const isWalletConnect = connector?.id === "walletConnect";
+
+  const doSign = useCallback((s: Socket, addr: string) => {
+    const message = `Wager Wars Authentication\nAddress: ${addr}\nTimestamp: ${Date.now()}`;
+    setNeedsSignature(false);
+    signMessageAsync({ message })
+      .then((signature) => {
+        const authData = { address: addr, signature, message };
+        s.emit("authenticate", authData);
+        saveAuth(authData);
+      })
+      .catch(() => {
+        console.error("Failed to sign auth message");
+        // If signing failed (user rejected or wallet didn't open), allow retry
+        setNeedsSignature(true);
+      });
+  }, [signMessageAsync]);
+
+  // Manual sign trigger (for mobile wallet users)
+  const requestSignature = useCallback(() => {
+    if (socket?.connected && address) {
+      doSign(socket, address);
+    }
+  }, [socket, address, doSign]);
 
   // Connect socket when wallet connects
   useEffect(() => {
@@ -67,6 +98,7 @@ export function SocketProvider({ children }: { children: ReactNode }) {
       disconnectSocket();
       setIsConnected(false);
       setIsAuthenticated(false);
+      setNeedsSignature(false);
       return;
     }
 
@@ -83,36 +115,30 @@ export function SocketProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      // No stored auth — request new signature
-      const message = `Wager Wars Authentication\nAddress: ${address}\nTimestamp: ${Date.now()}`;
-      signMessageAsync({ message })
-        .then((signature) => {
-          const authData = { address, signature, message };
-          s.emit("authenticate", authData);
-          saveAuth(authData);
-        })
-        .catch(() => {
-          console.error("Failed to sign auth message");
-        });
+      // For WalletConnect (mobile), don't auto-sign — show button instead
+      // Auto-signing fires before the wallet app is ready, causing the request to be lost
+      if (isWalletConnect) {
+        setNeedsSignature(true);
+        return;
+      }
+
+      // Desktop wallets (MetaMask, etc.) — auto-sign works fine
+      doSign(s, address);
     });
 
     s.on("authenticated", ({ success }) => {
       if (success) {
         setIsAuthenticated(true);
+        setNeedsSignature(false);
       } else {
-        // Stored signature rejected — clear and request new one
+        // Stored signature rejected — clear and retry
         clearAuth();
         setIsAuthenticated(false);
-        const message = `Wager Wars Authentication\nAddress: ${address}\nTimestamp: ${Date.now()}`;
-        signMessageAsync({ message })
-          .then((signature) => {
-            const authData = { address, signature, message };
-            s.emit("authenticate", authData);
-            saveAuth(authData);
-          })
-          .catch(() => {
-            console.error("Failed to sign auth message");
-          });
+        if (isWalletConnect) {
+          setNeedsSignature(true);
+        } else {
+          doSign(s, address);
+        }
       }
     });
 
@@ -126,10 +152,10 @@ export function SocketProvider({ children }: { children: ReactNode }) {
       s.off("authenticated");
       s.off("disconnect");
     };
-  }, [walletConnected, address, signMessageAsync]);
+  }, [walletConnected, address, isWalletConnect, doSign]);
 
   return (
-    <SocketContext.Provider value={{ socket, isConnected, isAuthenticated }}>
+    <SocketContext.Provider value={{ socket, isConnected, isAuthenticated, needsSignature, requestSignature }}>
       {children}
     </SocketContext.Provider>
   );

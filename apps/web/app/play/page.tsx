@@ -33,7 +33,7 @@ const STEP_LABELS: Record<string, string> = {
 
 export default function LobbyPage() {
   const { address, isConnected } = useAccount();
-  const { socket, isAuthenticated } = useSocket();
+  const { socket, isAuthenticated, needsSignature, requestSignature } = useSocket();
   const router = useRouter();
   const searchParams = useSearchParams();
   const deposit = useDeposit();
@@ -416,7 +416,23 @@ export default function LobbyPage() {
         </div>
       </div>
 
-      {!isAuthenticated && (
+      {!isAuthenticated && needsSignature && (
+        <div className="rounded-xl border border-yellow-500/20 bg-yellow-900/10 p-4 mb-6">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-yellow-400 text-sm font-bold">Signature required</p>
+              <p className="text-gray-500 text-xs mt-0.5">Tap the button, then confirm the signature in your wallet app.</p>
+            </div>
+            <button
+              onClick={requestSignature}
+              className="bg-yellow-500/20 hover:bg-yellow-500/30 border border-yellow-500/40 text-yellow-400 font-bold text-sm py-2 px-5 rounded-xl transition-all flex-shrink-0"
+            >
+              Sign
+            </button>
+          </div>
+        </div>
+      )}
+      {!isAuthenticated && !needsSignature && (
         <div className="rounded-xl border border-yellow-500/20 bg-yellow-900/10 p-4 mb-6 flex items-center gap-3">
           <div className="w-4 h-4 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin flex-shrink-0" />
           <p className="text-yellow-400 text-sm">Authenticating with server... Sign the message in your wallet.</p>
