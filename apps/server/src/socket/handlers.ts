@@ -33,6 +33,8 @@ export function registerHandlers(
   // Setup authentication — register socket in address lookup on successful auth
   setupAuth(socket, (address) => {
     addressToSocket.set(address, socket);
+    // Cancel pending disconnect forfeit if player reconnected in time
+    matchManager.cancelDisconnectTimer(address);
   });
 
   // --- Create Match ---
@@ -578,16 +580,22 @@ export function registerHandlers(
     const address = socket.data.address;
     if (address) {
       addressToSocket.delete(address);
-      const matchId = matchManager.handleDisconnect(address);
-      if (matchId) {
-        const match = matchManager.getMatch(matchId);
-        if (match && match.isOver()) {
-          const winnerAddr = match.getWinnerAddress();
-          // Auto-settle disconnect forfeit on-chain
-          handleAutoSettlement(io, matchId, match, winnerAddr);
-        }
+
+      // Set up delayed forfeit callback before calling handleDisconnect
+      const match = matchManager.getMatchByPlayer(address);
+      if (match && !match._onDisconnectForfeit) {
+        match._onDisconnectForfeit = (mId: string) => {
+          const m = matchManager.getMatch(mId);
+          if (m && m.isOver()) {
+            const winnerAddr = m.getWinnerAddress();
+            handleAutoSettlement(io, mId, m, winnerAddr);
+            setTimeout(() => matchManager.removeMatch(mId), 120_000);
+          }
+        };
       }
-      console.log(`[Socket] ${address} disconnected`);
+
+      matchManager.handleDisconnect(address);
+      console.log(`[Socket] ${address} disconnected (15s grace period for InProgress matches)`);
     }
   });
 }

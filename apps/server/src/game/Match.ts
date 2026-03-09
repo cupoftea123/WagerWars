@@ -42,6 +42,9 @@ export class Match {
   /** Temporary storage for bot's move between commit and reveal phases */
   public pendingBotMove: { action: Action; salt: `0x${string}`; commitHash: string } | null = null;
 
+  /** Callback for delayed disconnect forfeit (set by handlers.ts) */
+  public _onDisconnectForfeit: ((matchId: string) => void) | null = null;
+
   constructor(matchId: string, wagerAmount: number, player1Address: string, isDemo = false) {
     this.state = createMatchState(matchId, wagerAmount, player1Address);
     this.onChainMatchId = keccak256(toHex(matchId));

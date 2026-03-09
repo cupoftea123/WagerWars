@@ -79,11 +79,36 @@ export function useMatch(matchId: string) {
   const currentSaltRef = useRef<string | null>(null);
   const currentActionRef = useRef<Action | null>(null);
 
-  // Request current match state on mount (handles page navigation race condition)
+  // Request current match state on mount and on reconnect
   useEffect(() => {
     if (!socket) return;
     socket.emit("get_match_state" as any, { matchId });
+
+    // Resync when socket reconnects (e.g., after brief network glitch or page visibility change)
+    const handleReconnect = () => {
+      socket.emit("get_match_state" as any, { matchId });
+    };
+    socket.io.on("reconnect", handleReconnect);
+
+    return () => {
+      socket.io.off("reconnect", handleReconnect);
+    };
   }, [socket, matchId]);
+
+  // Stuck phase detection — if resolving/commit lasts too long, resync
+  useEffect(() => {
+    if (!socket) return;
+    const isStuck =
+      (state.phase === "resolving" && !state.winner) ||
+      (state.phase === "commit" && state.selectedAction !== null);
+    if (!isStuck) return;
+
+    const timer = setTimeout(() => {
+      socket.emit("get_match_state" as any, { matchId });
+    }, 12_000); // 12s — longer than any server timer grace period
+
+    return () => clearTimeout(timer);
+  }, [socket, matchId, state.phase, state.selectedAction, state.winner, state.round]);
 
   useEffect(() => {
     if (!socket) return;

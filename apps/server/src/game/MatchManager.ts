@@ -124,7 +124,10 @@ export class MatchManager {
     }
   }
 
-  /** Handle player disconnect — forfeit active match */
+  /** Pending disconnect forfeit timers — grace period before actual forfeit */
+  private disconnectTimers = new Map<string, ReturnType<typeof setTimeout>>();
+
+  /** Handle player disconnect — start grace period before forfeit */
   handleDisconnect(address: string): string | null {
     const match = this.getMatchByPlayer(address);
     if (!match) return null;
@@ -136,11 +139,25 @@ export class MatchManager {
     }
 
     if (match.status === MatchStatus.InProgress) {
-      const slot = match.getPlayerSlot(address);
-      if (slot !== null) {
-        match.forfeit(slot);
-        return match.matchId;
-      }
+      const key = address.toLowerCase();
+      // Don't double-schedule
+      if (this.disconnectTimers.has(key)) return null;
+
+      // 15s grace period — player may be refreshing or had a brief network glitch
+      const timer = setTimeout(() => {
+        this.disconnectTimers.delete(key);
+        // Re-check: player might have reconnected and match might have ended
+        const m = this.getMatchByPlayer(address);
+        if (!m || m.matchId !== match.matchId) return;
+        if (m.status !== MatchStatus.InProgress) return;
+        const slot = m.getPlayerSlot(address);
+        if (slot !== null) {
+          m.forfeit(slot);
+          // Return matchId via callback stored on the match for settlement
+          if (m._onDisconnectForfeit) m._onDisconnectForfeit(m.matchId);
+        }
+      }, 15_000);
+      this.disconnectTimers.set(key, timer);
     }
 
     // WaitingForOpponent / WaitingForDeposits: Don't remove on disconnect —
@@ -149,6 +166,16 @@ export class MatchManager {
     // Cleanup: on-chain expiry (30 min) or manual cancel.
 
     return null;
+  }
+
+  /** Cancel pending disconnect forfeit (player reconnected) */
+  cancelDisconnectTimer(address: string): void {
+    const key = address.toLowerCase();
+    const timer = this.disconnectTimers.get(key);
+    if (timer) {
+      clearTimeout(timer);
+      this.disconnectTimers.delete(key);
+    }
   }
 
   /** Get a player's active (non-completed) match, if any */
