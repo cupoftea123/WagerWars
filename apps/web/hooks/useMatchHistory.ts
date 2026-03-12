@@ -233,6 +233,7 @@ export function useMatchHistory() {
   const [stats, setStats] = useState<MatchStats>({ total: 0, wins: 0, losses: 0, draws: 0, totalEarned: 0, totalWagered: 0 });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isFirstLoad, setIsFirstLoad] = useState(false);
   const fetchingRef = useRef(false);
 
   const fetchHistory = useCallback(async (forceFullRefresh = false) => {
@@ -248,6 +249,11 @@ export function useMatchHistory() {
       // Try to use cache for incremental fetch
       const cache = forceFullRefresh ? null : loadCache(address);
       const startBlock = cache ? BigInt(cache.lastBlock) + 1n : DEPLOY_BLOCK;
+
+      // First load = no cache, scanning from deploy block
+      if (!cache) {
+        setIsFirstLoad(true);
+      }
 
       // Show cached data immediately while fetching new
       if (cache && cache.entries.length > 0) {
@@ -305,6 +311,7 @@ export function useMatchHistory() {
       setError(err?.message || "Failed to load match history");
     } finally {
       setLoading(false);
+      setIsFirstLoad(false);
       fetchingRef.current = false;
     }
   }, [address, publicClient]);
@@ -313,5 +320,5 @@ export function useMatchHistory() {
     fetchHistory();
   }, [fetchHistory]);
 
-  return { history, stats, loading, error, refresh: () => fetchHistory(true) };
+  return { history, stats, loading, error, isFirstLoad, refresh: () => fetchHistory() };
 }

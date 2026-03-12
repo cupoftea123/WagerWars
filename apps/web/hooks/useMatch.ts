@@ -43,6 +43,7 @@ interface MatchHookState {
   settlement: SettlementInfo | null;
   isDemo: boolean;
   commitTimeout: number;
+  reconnecting: boolean;
 }
 
 export function useMatch(matchId: string) {
@@ -73,6 +74,7 @@ export function useMatch(matchId: string) {
     settlement: null,
     isDemo: false,
     commitTimeout: 30,
+    reconnecting: false,
   });
 
   // Store salt for current round (needed for reveal)
@@ -104,8 +106,9 @@ export function useMatch(matchId: string) {
     if (!isStuck) return;
 
     const timer = setTimeout(() => {
+      setState((prev) => ({ ...prev, reconnecting: true }));
       socket.emit("get_match_state" as any, { matchId });
-    }, 12_000); // 12s — longer than any server timer grace period
+    }, 5_000); // 5s — fast enough to resync before server timeout auto-plays
 
     return () => clearTimeout(timer);
   }, [socket, matchId, state.phase, state.selectedAction, state.winner, state.round]);
@@ -135,6 +138,7 @@ export function useMatch(matchId: string) {
           onChainMatchId: data.onChainMatchId ?? null,
           wagerAmount: data.wagerAmount ?? null,
           isDemo: data.isDemo ?? false,
+          reconnecting: false,
         }));
       } else if (data.status === "COMPLETED") {
         setState((prev) => ({
@@ -143,6 +147,7 @@ export function useMatch(matchId: string) {
           roundResults: data.roundResults ?? [],
           winner: data.winner,
           winReason: data.winReason,
+          reconnecting: false,
         }));
       } else if (data.status === "WAITING_FOR_DEPOSITS" || data.status === "WAITING_FOR_OPPONENT") {
         setState((prev) => ({
@@ -152,6 +157,7 @@ export function useMatch(matchId: string) {
           onChainMatchId: data.onChainMatchId ?? null,
           wagerAmount: data.wagerAmount ?? null,
           playerSlot: data.playerSlot ?? null,
+          reconnecting: false,
         }));
       }
 
@@ -195,6 +201,7 @@ export function useMatch(matchId: string) {
         selectedAction: null,
         error: null,
         commitTimeout: data.commitTimeout ?? 30,
+        reconnecting: false,
       }));
       currentSaltRef.current = null;
       currentActionRef.current = null;

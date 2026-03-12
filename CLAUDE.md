@@ -126,6 +126,9 @@ app/
     [matchId]/page.tsx    — Battle arena
   profile/
     page.tsx              — Match history + stats (from on-chain MatchPayout events)
+  global-error.tsx        — Root error boundary (renders own <html>)
+  error.tsx               — Page-level error boundary
+  play/[matchId]/error.tsx — Match-specific error boundary
   globals.css             — Global styles + .glass-card, .text-gradient-red utilities
 components/
   game/
@@ -214,6 +217,10 @@ Prevents cheating: neither player can change their move after seeing opponent's 
 
 **Server → Client:** `authenticated`, `match_created` (includes `isDemo` flag), `match_joined`, `opponent_joined`, `deposit_required`, `deposit_confirmed`, `round_start` (includes `commitTimeout`: 30 or 20), `opponent_committed`, `reveal_phase`, `round_result`, `match_result`, `open_matches`, `active_match`, `match_cancelled`, `match_started_alert`, `rematch_invite`, `rematch_waiting`, `rematch_declined`, `rematch_created`, `error`
 
+## Infinite Approve (Enable Fast Deposits)
+
+`useDeposit.ts` includes an "Enable Fast Deposits" feature — a one-time `approve(WagerWars, maxUint256)` so future matches skip the approve step entirely. Shown as a green card in the lobby when the player's current allowance is below `1 trillion USDC` threshold. Separate state tracking (`unlimitedApproveStep`, `unlimitedApproveTxHash`) to avoid interfering with the per-match deposit flow.
+
 ## Deposit Flow (Allowance Check → Approve → Deposit)
 
 The `useDeposit` hook (`hooks/useDeposit.ts`) manages the on-chain deposit with automatic allowance optimization:
@@ -278,7 +285,16 @@ Edge case: if both players click "Play Again" simultaneously, the second `reques
 
 ## Profile Page
 
-`/profile` displays on-chain match history by querying `MatchPayout` events filtered by player address (indexed). For each event, `getMatch(matchId)` fetches opponent, winner, wager amount, and status. Shows W/L/D stats, total earned/wagered, and a table with Snowtrace tx links.
+`/profile` displays on-chain match history by querying `MatchPayout` and `MatchSettled` events. For each event, `getMatch(matchId)` fetches opponent, winner, wager amount, and status. Shows W/L/D stats, total earned/wagered, and a paginated table (25 per page) with Snowtrace tx links.
+
+**Performance optimizations** (`useMatchHistory.ts`):
+- Scans from contract deploy block (`51954160`), not a rolling window — captures full history
+- **localStorage cache**: entries + last scanned block saved per address. Cached data shown instantly on page load.
+- **Incremental fetch**: only queries new blocks since last cache. Refresh button also does incremental fetch (not full rescan).
+- **Parallel batch RPC**: `getMatch()` and `getBlock()` calls in batches of 10 concurrent via `Promise.all`
+- **Chunked log scanning**: 2000-block chunks (Fuji RPC limit)
+- **First load banner**: blue info banner shown when no cache exists ("Scanning blockchain history — this may take up to a minute")
+- `isFirstLoad` flag tracks whether cache existed on mount
 
 Data source is entirely on-chain — no server API needed for history.
 
@@ -305,7 +321,8 @@ Demo mode lets players test game mechanics without on-chain transactions or USDC
 - Demo matches filtered from `getOpenMatches()` (not visible in lobby)
 - Bot NOT registered in `playerMatches` map (not a real player)
 - On disconnect, demo matches are immediately removed (no forfeit/settlement)
-- Demo matches have no timeouts, rematches, or on-chain interactions
+- Demo matches have server-side commit/reveal timers (same as real matches). No rematches or on-chain interactions.
+- Demo forfeit: `leave_match` emits `match_result` with `winReason: "forfeit"` before cleanup — required for client redirect
 
 ## CSS Utilities & Design System
 
@@ -446,8 +463,11 @@ if (socket.data.currentMatchId === matchId) { // only if still the OLD match
 }
 ```
 
-### handleDisconnect should not forfeit WaitingForDeposits
-Page navigation (especially during rematch redirects) can cause brief socket disconnects. `handleDisconnect` should only forfeit `InProgress` matches, not `WaitingForDeposits` — otherwise a rematch match gets destroyed before players even deposit. The 30-min on-chain expiry handles actual abandoned matches.
+### Disconnect grace period (15s) before forfeit
+`MatchManager.handleDisconnect()` schedules a 15-second delayed forfeit for `InProgress` matches (not immediate). Player may be refreshing the page or had a brief network glitch. `cancelDisconnectTimer(address)` is called on reconnect (in `setupAuth` callback) to cancel the pending forfeit. `Match._onDisconnectForfeit` callback triggers settlement if the timer expires. `WaitingForDeposits` matches are never forfeited on disconnect — the 30-min on-chain expiry handles actual abandoned matches.
+
+### Client-side stuck phase detection and reconnect resync
+`useMatch.ts` listens for `socket.io.on("reconnect")` and re-emits `get_match_state` to resync after brief disconnects. Additionally, a 12-second stuck detection timer fires if the client is in `resolving` phase (without a winner) or `commit` phase (with an already-selected action) — triggers a resync request to recover from missed server events.
 
 ### Rematch preserves original player order
 `createRematchMatch` uses `getRematchInfo()` which returns `player1`/`player2` from the OLD match (by slot index, not by who requested). Player1 in rematch = Player1 in original match. This means the same player always deposits first (createMatch on-chain).

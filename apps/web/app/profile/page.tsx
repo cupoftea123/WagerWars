@@ -1,10 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { useAccount } from "wagmi";
 import Link from "next/link";
 import { useMatchHistory } from "@/hooks/useMatchHistory";
 import { WalletButton } from "@/components/WalletButton";
+
+const PAGE_SIZE = 25;
 
 const RESULT_BADGE: Record<string, { bg: string; text: string }> = {
   WIN: { bg: "bg-green-500/10 border border-green-500/20", text: "text-green-400" },
@@ -15,7 +18,11 @@ const RESULT_BADGE: Record<string, { bg: string; text: string }> = {
 
 export default function ProfilePage() {
   const { address, isConnected } = useAccount();
-  const { history, stats, loading, error, refresh } = useMatchHistory();
+  const { history, stats, loading, error, isFirstLoad, refresh } = useMatchHistory();
+  const [page, setPage] = useState(0);
+
+  const totalPages = Math.max(1, Math.ceil(history.length / PAGE_SIZE));
+  const pagedHistory = history.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
   if (!isConnected) {
     return (
@@ -98,6 +105,17 @@ export default function ProfilePage() {
           </button>
         </div>
 
+        {/* First load banner */}
+        {isFirstLoad && loading && (
+          <div className="mb-4 rounded-xl bg-blue-500/10 border border-blue-500/20 px-4 py-3 flex items-start gap-3">
+            <div className="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-blue-400 text-sm font-medium">First time loading</p>
+              <p className="text-blue-400/60 text-xs mt-0.5">Scanning blockchain history — this may take up to a minute. Future visits will be instant.</p>
+            </div>
+          </div>
+        )}
+
         {error ? (
           <div className="text-center py-8">
             <div className="text-red-400 text-sm mb-2">Failed to load history</div>
@@ -138,7 +156,7 @@ export default function ProfilePage() {
                 </tr>
               </thead>
               <tbody>
-                {history.map((entry) => {
+                {pagedHistory.map((entry) => {
                   const badge = RESULT_BADGE[entry.result] || RESULT_BADGE.CANCELLED;
                   return (
                     <tr key={entry.txHash} className="border-b border-white/[0.03] hover:bg-white/[0.02] transition-colors">
@@ -176,6 +194,29 @@ export default function ProfilePage() {
                 })}
               </tbody>
             </table>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between mt-4 pt-4 border-t border-white/[0.05]">
+                <button
+                  onClick={() => setPage((p) => Math.max(0, p - 1))}
+                  disabled={page === 0}
+                  className="text-gray-500 hover:text-white text-xs transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  &larr; Previous
+                </button>
+                <span className="text-gray-500 text-xs">
+                  Page {page + 1} of {totalPages}
+                </span>
+                <button
+                  onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+                  disabled={page >= totalPages - 1}
+                  className="text-gray-500 hover:text-white text-xs transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  Next &rarr;
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>

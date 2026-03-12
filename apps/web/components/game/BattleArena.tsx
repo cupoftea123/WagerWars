@@ -330,6 +330,16 @@ export function BattleArena({ matchId }: BattleArenaProps) {
       <FloatingDamageNumbers numbers={effects.damageNumbers} />
       <RoundTransitionOverlay round={effects.roundTransition} />
 
+      {/* Reconnecting overlay */}
+      {match.reconnecting && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm rounded-2xl">
+          <div className="flex items-center gap-3 glass-card rounded-xl px-5 py-3">
+            <div className="w-5 h-5 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
+            <span className="text-sm text-gray-300 font-medium">Reconnecting...</span>
+          </div>
+        </div>
+      )}
+
       {/* Demo Badge */}
       {match.isDemo && (
         <div className="text-center mb-2">
